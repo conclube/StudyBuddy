@@ -1,1 +1,1 @@
-data class Settings()
+data class Settings(val servers: List<Long>)
