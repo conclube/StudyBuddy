@@ -1,0 +1,11 @@
+{
+  "name": "Default",
+  "studySessionDuration": {
+    "min": "PT25M",
+    "max": "PT30M"
+  },
+  "breakSessionDuration": {
+    "min": "PT10M",
+    "max": "PT15M"
+  }
+}
