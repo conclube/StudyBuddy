@@ -1,4 +1,9 @@
-class ConfigurationRepository(private val map: MutableMap<String, Configuration>) : Iterable<Configuration>{
+import java.nio.file.Path
+import kotlin.io.path.name
+
+class ConfigurationRepository(
+    private val map: MutableMap<String, Configuration>
+) : Iterable<Configuration>{
 
     companion object {
         @JvmStatic
@@ -7,7 +12,7 @@ class ConfigurationRepository(private val map: MutableMap<String, Configuration>
         }
     }
 
-    fun registerConfiguration(configuration: Configuration): Boolean {
+    fun registerConfiguration(fileName: String, configuration: Configuration): Boolean {
         try {
             configuration.studySessionDuration.maxAsDuration()
             configuration.studySessionDuration.minAsDuration()
@@ -16,8 +21,11 @@ class ConfigurationRepository(private val map: MutableMap<String, Configuration>
         } catch (e: IllegalArgumentException) {
             return false;
         }
-        if (this.map[configuration.name] == null) {
-            this.map[configuration.name] = configuration
+        if (fileName.isEmpty()) {
+            return false;
+        }
+        if (this.map[fileName] == null) {
+            this.map[fileName] = configuration
             return true
         }
         return false
@@ -29,5 +37,9 @@ class ConfigurationRepository(private val map: MutableMap<String, Configuration>
 
     override fun iterator(): Iterator<Configuration> {
         return this.map.values.iterator()
+    }
+
+    override fun toString(): String {
+        return this.map.toString();
     }
 }

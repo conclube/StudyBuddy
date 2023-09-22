@@ -7,16 +7,20 @@ import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
 import java.time.Duration
 import java.time.temporal.ChronoUnit
+import kotlin.io.path.name
 
 class Main {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
+            val botBuilder = Bot.builder()
             try {
                 val settingsFile = Path.of(".").resolve("settings.json")
                 val configurationsDir = Path.of(".").resolve("configurations")
                 val defaultConfigurationFile = configurationsDir.resolve("default.json")
-                FileSystems.newFileSystem(File(Main::class.java.protectionDomain.codeSource.location.path).toPath()).use {
+                //TODO find a way to avoid File.java
+                val path = File(Main::class.java.protectionDomain.codeSource.location.path).toPath()
+                FileSystems.newFileSystem(path).use {
                     if (Files.notExists(settingsFile)) {
                         Files.copy(it.getPath("settings.json"), settingsFile)
                     }
@@ -30,35 +34,34 @@ class Main {
                     }
                 }
                 val repository = ConfigurationRepository.create()
-                Files.walkFileTree(configurationsDir,ConfigurationFileVisitor(repository))
-                for (configuration in repository) {
-                    println(configuration)
+                botBuilder.repository(repository)
+                Files.walkFileTree(configurationsDir,ConfigurationFileRegistrationVisitor(repository))
+
+                Files.newInputStream(settingsFile).use {
+                    @OptIn(ExperimentalSerializationApi::class)
+                    botBuilder.settings(Json.decodeFromStream<Settings>(it));
                 }
 
-                // Try adding program arguments via Run/Debug configuration.
-                // Learn more about running applications: https://www.jetbrains.com/help/idea/running-applications.html.
-                println("Program arguments: ${args.joinToString()}")
-                println(
-                    Duration.of(
-                        30, ChronoUnit.MINUTES
-                    )
-                );
-                //ZipFileSystem
             } catch (e: Throwable){
                 e.printStackTrace()
             }
+            val bot = botBuilder.build();
+            println(bot)
         }
     }
 
-    class ConfigurationFileVisitor(private val repository: ConfigurationRepository) : FileVisitor<Path> {
+    class ConfigurationFileRegistrationVisitor(private val repository: ConfigurationRepository) : FileVisitor<Path> {
         override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes?): FileVisitResult {
             return FileVisitResult.CONTINUE
         }
 
         @OptIn(ExperimentalSerializationApi::class)
         override fun visitFile(file: Path, attrs: BasicFileAttributes?): FileVisitResult {
-            Files.newInputStream(file).use {
-                this.repository.registerConfiguration(Json.decodeFromStream<Configuration>(it))
+            val name = file.name
+            if (name.endsWith(".json")) {
+                Files.newInputStream(file).use {
+                    this.repository.registerConfiguration(name.substring(0,name.length-5), Json.decodeFromStream<Configuration>(it))
+                }
             }
             return FileVisitResult.CONTINUE
         }
